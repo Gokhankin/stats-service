@@ -392,6 +392,10 @@
                 font-size: 12px !important;
                 min-width: 720px !important;
             }
+            #todayEnteredModal .table-responsive table {
+                font-size: 13px !important;
+                min-width: 960px !important;
+            }
             .table-responsive th, .table-responsive td {
                 padding: 8px 6px !important;
                 white-space: nowrap;
@@ -968,28 +972,28 @@
                                     </div>
                                 </div>
 
-                                <div class="table-responsive">
-                                    <table style="width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed;">
+                                <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%;">
+                                    <table style="width: 100%; border-collapse: collapse; font-size: 13px; min-width: 960px;">
                                         <colgroup>
-                                            <col style="width: 13%;">
-                                            <col style="width: 17%;">
-                                            <col style="width: 22%;">
-                                            <col style="width: 18%;">
-                                            <col style="width: 7%;">
-                                            <col style="width: 11%;">
-                                            <col style="width: 5%;">
-                                            <col style="width: 7%;">
+                                            <col style="width: 12%; min-width: 110px;">
+                                            <col style="width: 16%; min-width: 140px;">
+                                            <col style="width: 18%; min-width: 150px;">
+                                            <col style="width: 22%; min-width: 195px;">
+                                            <col style="width: 8%; min-width: 75px;">
+                                            <col style="width: 12%; min-width: 115px;">
+                                            <col style="width: 6%; min-width: 65px;">
+                                            <col style="width: 6%; min-width: 80px;">
                                         </colgroup>
                                         <thead>
                                             <tr style="border-bottom: 1px solid rgba(255,255,255,0.1); color: #9ca3af; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">
-                                                <th style="padding: 10px 8px; width: 13%;">Rez / Voucher</th>
-                                                <th style="padding: 10px 8px; width: 17%;">Misafir Adı</th>
-                                                <th style="padding: 10px 8px; width: 22%;">Acente / Kanal</th>
-                                                <th style="padding: 10px 8px; width: 18%;">Giriş - Çıkış</th>
-                                                <th style="padding: 10px 8px; width: 7%; text-align: center;">Gece</th>
-                                                <th style="padding: 10px 8px; width: 11%; text-align: center;">Oda & Tipi</th>
-                                                <th style="padding: 10px 8px; width: 5%; text-align: center;">Pax</th>
-                                                <th style="padding: 10px 8px; width: 7%; text-align: right;">Kayıt Saati</th>
+                                                <th style="padding: 10px 8px; width: 12%; min-width: 110px; white-space: nowrap;">Rez / Voucher</th>
+                                                <th style="padding: 10px 8px; width: 16%; min-width: 140px; white-space: nowrap;">Misafir Adı</th>
+                                                <th style="padding: 10px 8px; width: 18%; min-width: 150px; white-space: nowrap;">Acente / Kanal</th>
+                                                <th style="padding: 10px 8px; width: 22%; min-width: 195px; white-space: nowrap;">Giriş - Çıkış</th>
+                                                <th style="padding: 10px 8px; width: 8%; min-width: 75px; text-align: center; white-space: nowrap;">Gece</th>
+                                                <th style="padding: 10px 8px; width: 12%; min-width: 115px; text-align: center; white-space: nowrap;">Oda & Tipi</th>
+                                                <th style="padding: 10px 8px; width: 6%; min-width: 65px; text-align: center; white-space: nowrap;">Pax</th>
+                                                <th style="padding: 10px 8px; width: 6%; min-width: 80px; text-align: right; white-space: nowrap;">Kayıt Saati</th>
                                             </tr>
                                         </thead>
                                         <tbody>
