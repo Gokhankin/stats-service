@@ -78,12 +78,7 @@
         }
 
         .today-date::before {
-            content: '';
-            width: 8px;
-            height: 8px;
-            background: #10b981;
-            border-radius: 50%;
-            box-shadow: 0 0 10px #10b981;
+            display: none;
         }
 
         main {
@@ -417,14 +412,15 @@
 <body>
     <header>
         <div class="today-date">
-            <span>{{ today_date }}</span>
-            {% set stats26 = all_stats.get('2026') or all_stats.get(2026) %}
-            {% if stats26 and stats26.TodayEnteredRooms and stats26.TodayEnteredRooms > 0 %}
-                <button onclick="openTodayEnteredModal('2026')" style="cursor: pointer; font-size: 13px; font-weight: 800; background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); padding: 6px 14px; border-radius: 20px; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 6px;" title="Bugün girilen rezervasyon detayları" onmouseover="this.style.background='rgba(59, 130, 246, 0.35)'" onmouseout="this.style.background='rgba(59, 130, 246, 0.2)'">
-                    <span style="width: 8px; height: 8px; background: #60a5fa; border-radius: 50%; display: inline-block;"></span>
-                    +{{ stats26.TodayEnteredRooms }} BUGÜN GİRİLEN REZ
-                </button>
-            {% endif %}
+            {% if today_date %}<span>{{ today_date }}</span>{% endif %}
+            <div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: #34d399; padding: 5px 12px; border-radius: 20px; font-weight: 800; font-size: 12px; letter-spacing: 0.5px;" title="Sedna Canlı SQL Veritabanı">
+                <span style="width: 8px; height: 8px; background: #34d399; border-radius: 50%; display: inline-block; box-shadow: 0 0 8px rgba(52, 211, 153, 0.8);"></span>
+                <span>SQL</span>
+            </div>
+            <button onclick="refreshData()" style="cursor: pointer; font-size: 12px; font-weight: 800; background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); padding: 5px 12px; border-radius: 20px; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 6px;" title="Verileri Şimdi Yenile" onmouseover="this.style.background='rgba(16, 185, 129, 0.3)'" onmouseout="this.style.background='rgba(16, 185, 129, 0.15)'">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                YENİLE
+            </button>
         </div>
         <h1>STATISTICS</h1>
         <div class="subtitle">30 Minute Live Update • Year to Date (Stay/Rev)<br>& Season Pace (Occ)</div>
@@ -728,6 +724,8 @@
         }
 
         let CURRENT_MODAL_YEAR = 2026;
+        let CURRENT_SELECTED_RECORD_DATE = null;
+        let CURRENT_SELECTED_ARRIVAL_DATE = 'all';
 
         function openTodayEnteredModal(year, filterRecordDate = null) {
             try {
@@ -740,14 +738,14 @@
                     document.body.style.overflow = 'hidden';
                 }
 
-                renderModalContent(year, filterRecordDate);
+                renderModalContent(year, filterRecordDate, 'all');
             } catch(e) {
                 console.error("openTodayEnteredModal Error:", e);
                 alert("Modal açılırken hata: " + e.message);
             }
         }
 
-        function renderModalContent(year, selectedRecordDate) {
+        function renderModalContent(year, selectedRecordDate, selectedArrivalDate = 'all') {
             try {
                 year = parseInt(year) || 2026;
                 const stats = ALL_STATS_DATA[year] || ALL_STATS_DATA[String(year)];
@@ -781,6 +779,9 @@
                     }
                 }
 
+                CURRENT_SELECTED_RECORD_DATE = selectedRecordDate;
+                CURRENT_SELECTED_ARRIVAL_DATE = selectedArrivalDate;
+
                 // Filter details based on selectedRecordDate
                 let filteredDetails = allDetails;
                 if (selectedRecordDate !== 'all') {
@@ -811,25 +812,18 @@
 
                 let html = '';
 
-                // Render Date Selector Tabs Bar (Past Days Filter Bar)
+                // 1. KAYIT TARİHİ SEÇİN (GEÇMİŞ GÜNLER) - LIST SELECTOR DROPDOWN
                 html += `
-                    <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 18px; padding: 15px 20px; margin-bottom: 25px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
-                        <div style="font-size: 12px; font-weight: 800; color: #9ca3af; letter-spacing: 1px; text-transform: uppercase; display: flex; align-items: center; gap: 8px;">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 18px; padding: 15px 20px; margin-bottom: 25px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
+                        <div style="font-size: 13px; font-weight: 800; color: #9ca3af; letter-spacing: 1px; text-transform: uppercase; display: flex; align-items: center; gap: 10px;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                             KAYIT TARİHİ SEÇİN (GEÇMİŞ GÜNLER):
                         </div>
-                        <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                        <div style="position: relative; min-width: 280px; flex: 1; max-width: 440px;">
+                            <select id="recordDateSelect" onchange="renderModalContent(${year}, this.value, 'all')" style="width: 100%; background: #0f172a; color: #60a5fa; border: 1.5px solid rgba(96, 165, 250, 0.4); padding: 11px 16px; border-radius: 12px; font-size: 13px; font-weight: 800; font-family: 'Plus Jakarta Sans', sans-serif; cursor: pointer; outline: none; box-shadow: 0 4px 20px rgba(0,0,0,0.4); -webkit-appearance: none; appearance: none; background-image: url('data:image/svg+xml;utf8,<svg fill=\"%2360a5fa\" height=\"24\" viewBox=\"0 0 24 24\" width=\"24\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M7 10l5 5 5-5z\"/></svg>'); background-repeat: no-repeat; background-position: right 14px center; padding-right: 40px;">
+                                <option value="all" ${selectedRecordDate === 'all' ? 'selected' : ''}>📋 Tüm Son 14 Gün (Toplam ${allDetails.length} Rezervasyon)</option>
                 `;
 
-                // 1. "Tüm Son 14 Gün" Pill
-                const isAllActive = selectedRecordDate === 'all';
-                html += `
-                    <button onclick="renderModalContent(${year}, 'all')" style="background: ${isAllActive ? '#3b82f6' : 'rgba(255,255,255,0.06)'}; color: ${isAllActive ? '#ffffff' : '#9ca3af'}; border: 1px solid ${isAllActive ? '#60a5fa' : 'rgba(255,255,255,0.12)'}; padding: 7px 14px; border-radius: 10px; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s ease;">
-                        Tüm Son 14 Gün (${allDetails.length})
-                    </button>
-                `;
-
-                // 2. Individual Date Pills
                 availableDates.forEach(dateStr => {
                     const count = allDetails.filter(i => i && String(i.RecordDateOnly) === String(dateStr)).length;
                     const isActive = selectedRecordDate === dateStr;
@@ -837,7 +831,7 @@
                     try {
                         const parts = dateStr.split('-');
                         const dObj = new Date(parts[0], parseInt(parts[1])-1, parts[2]);
-                        label = dObj.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
+                        label = dObj.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' });
                     } catch(e) {}
 
                     if (dateStr === todayStr) {
@@ -851,14 +845,11 @@
                         }
                     }
 
-                    html += `
-                        <button onclick="renderModalContent(${year}, '${dateStr}')" style="background: ${isActive ? '#10b981' : 'rgba(255,255,255,0.06)'}; color: ${isActive ? '#ffffff' : '#e2e8f0'}; border: 1px solid ${isActive ? '#34d399' : 'rgba(255,255,255,0.12)'}; padding: 7px 14px; border-radius: 10px; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s ease;">
-                            ${label} (${count} Rez)
-                        </button>
-                    `;
+                    html += `<option value="${dateStr}" ${isActive ? 'selected' : ''}>📅 ${label} — (${count} Rezervasyon)</option>`;
                 });
 
                 html += `
+                            </select>
                         </div>
                     </div>
                 `;
@@ -868,7 +859,7 @@
                         <div style="text-align: center; padding: 60px 20px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 20px;">
                             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" style="margin-bottom: 15px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
                             <div style="font-size: 18px; font-weight: 700; color: #9ca3af; margin-bottom: 8px;">Seçilen Kayıt Tarihinde Girilmiş Rezervasyon Bulunmuyor</div>
-                            <div style="font-size: 13px; color: #6b7280;">Lütfen yukarıdaki filtre butonlarından başka bir kayıt tarihi seçiniz.</div>
+                            <div style="font-size: 13px; color: #6b7280;">Lütfen yukarıdaki listeden başka bir kayıt tarihi seçiniz.</div>
                         </div>
                     `;
                 } else {
@@ -892,7 +883,7 @@
 
                     // 1. KPI Bar
                     html += `
-                        <div class="modal-kpi-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 30px;">
+                        <div class="modal-kpi-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 25px;">
                             <div class="modal-kpi-card" style="background: rgba(96, 165, 250, 0.08); border: 1px solid rgba(96, 165, 250, 0.2); border-radius: 16px; padding: 20px;">
                                 <div style="font-size: 11px; font-weight: 800; color: #93c5fd; letter-spacing: 1px; text-transform: uppercase;">GİRİLEN REZERVASYON</div>
                                 <div class="modal-kpi-val" style="font-family: 'Barlow', sans-serif; font-size: 38px; font-weight: 800; color: #60a5fa; margin-top: 4px;">${filteredDetails.length} <span style="font-size: 16px; font-weight: 600;">Adet</span></div>
@@ -912,14 +903,22 @@
                         </div>
                     `;
 
-                    // 2. Arrival Dates Summary Overview
+                    // 2. GELİŞ TARİHLERİ ÖZETİ - LIST SELECTOR DROPDOWN
                     html += `
                         <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px; padding: 20px; margin-bottom: 25px;">
-                            <h3 style="font-family: 'Barlow', sans-serif; font-size: 18px; font-weight: 800; color: #fbbf24; margin-bottom: 12px; letter-spacing: 1px; display: flex; align-items: center; gap: 8px;">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                GELİŞ TARİHLERİ ÖZETİ (HANGİ TARİHLERDE GELECEK?)
-                            </h3>
-                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 14px;">
+                                <h3 style="font-family: 'Barlow', sans-serif; font-size: 18px; font-weight: 800; color: #fbbf24; letter-spacing: 1px; display: flex; align-items: center; gap: 8px; margin: 0;">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                    GELİŞ TARİHLERİ ÖZETİ (HANGİ TARİHLERDE GELECEK?)
+                                </h3>
+                                <div style="font-size: 12px; color: #9ca3af; font-weight: 600;">
+                                    Toplam <span style="color: #fbbf24; font-weight: 800;">${arrivalDatesSorted.length}</span> Farklı Geliş Tarihi
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+                                <div style="position: relative; min-width: 280px; flex: 1; max-width: 480px;">
+                                    <select id="arrivalDateSelect" onchange="renderModalContent(${year}, '${selectedRecordDate}', this.value)" style="width: 100%; background: #0f172a; color: #34d399; border: 1.5px solid rgba(52, 211, 153, 0.4); padding: 11px 16px; border-radius: 12px; font-size: 13px; font-weight: 800; font-family: 'Plus Jakarta Sans', sans-serif; cursor: pointer; outline: none; box-shadow: 0 4px 20px rgba(0,0,0,0.4); -webkit-appearance: none; appearance: none; background-image: url('data:image/svg+xml;utf8,<svg fill=\"%2334d399\" height=\"24\" viewBox=\"0 0 24 24\" width=\"24\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M7 10l5 5 5-5z\"/></svg>'); background-repeat: no-repeat; background-position: right 14px center; padding-right: 40px;">
+                                        <option value="all" ${selectedArrivalDate === 'all' ? 'selected' : ''}>📌 Tüm Geliş Tarihlerini Göster (${arrivalDatesSorted.length} Tarih • ${totalRooms} Oda)</option>
                     `;
 
                     arrivalDatesSorted.forEach(dateStr => {
@@ -927,7 +926,7 @@
                         let gRooms = 0;
                         let gPax = 0;
                         items.forEach(i => { gRooms += (i.RoomCount || 1); gPax += (i.Pax || 0); });
-                        
+
                         let formattedDate = dateStr;
                         try {
                             const parts = dateStr.split('-');
@@ -935,23 +934,26 @@
                             formattedDate = dObj.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', weekday: 'long' });
                         } catch(e) {}
 
-                        html += `
-                            <div onclick="const el=document.getElementById('group-${dateStr}'); if(el) el.scrollIntoView({behavior: 'smooth'})" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); padding: 10px 16px; border-radius: 12px; cursor: pointer; transition: all 0.2s ease; flex: 1 1 auto; max-width: 100%;" onmouseover="this.style.background='rgba(16, 185, 129, 0.25)';" onmouseout="this.style.background='rgba(16, 185, 129, 0.1)';">
-                                <div style="font-size: 12px; font-weight: 800; color: #34d399;">${formattedDate}</div>
-                                <div style="font-size: 14px; font-weight: 800; color: #f9fafb; margin-top: 2px;">
-                                    ${gRooms} Oda <span style="font-size: 12px; color: #9ca3af; font-weight: 500;">(${gPax} Pax • ${items.length} Rez)</span>
-                                </div>
-                            </div>
-                        `;
+                        const isSel = selectedArrivalDate === dateStr ? 'selected' : '';
+                        html += `<option value="${dateStr}" ${isSel}>🗓️ ${formattedDate} — ${gRooms} Oda (${gPax} Pax • ${items.length} Rez)</option>`;
                     });
 
                     html += `
+                                    </select>
+                                </div>
+                                ${selectedArrivalDate !== 'all' ? `
+                                    <button onclick="renderModalContent(${year}, '${selectedRecordDate}', 'all')" style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399; padding: 11px 18px; border-radius: 12px; font-size: 12px; font-weight: 800; cursor: pointer; transition: all 0.2s ease;" onmouseover="this.style.background='rgba(16, 185, 129, 0.3)'" onmouseout="this.style.background='rgba(16, 185, 129, 0.15)'">
+                                        Tüm Tarihleri Göster
+                                    </button>
+                                ` : ''}
                             </div>
                         </div>
                     `;
 
-                    // 3. Grouped Tables by Arrival Date
-                    arrivalDatesSorted.forEach(dateStr => {
+                    // 3. Grouped Tables by Arrival Date (Filtered if selectedArrivalDate != 'all')
+                    const displayArrivalDates = (selectedArrivalDate !== 'all' && arrivalGroups[selectedArrivalDate]) ? [selectedArrivalDate] : arrivalDatesSorted;
+
+                    displayArrivalDates.forEach(dateStr => {
                         const items = arrivalGroups[dateStr];
                         let formattedDate = dateStr;
                         try {
@@ -973,27 +975,27 @@
                                 </div>
 
                                 <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%;">
-                                    <table style="width: 100%; border-collapse: collapse; font-size: 13px; min-width: 960px;">
+                                    <table style="width: 100%; border-collapse: collapse; font-size: 13px; min-width: 960px; table-layout: fixed;">
                                         <colgroup>
-                                            <col style="width: 12%; min-width: 110px;">
-                                            <col style="width: 16%; min-width: 140px;">
-                                            <col style="width: 18%; min-width: 150px;">
-                                            <col style="width: 22%; min-width: 195px;">
-                                            <col style="width: 8%; min-width: 75px;">
-                                            <col style="width: 12%; min-width: 115px;">
-                                            <col style="width: 6%; min-width: 65px;">
-                                            <col style="width: 6%; min-width: 80px;">
+                                            <col style="width: 11%;">
+                                            <col style="width: 18%;">
+                                            <col style="width: 22%;">
+                                            <col style="width: 18%;">
+                                            <col style="width: 7%;">
+                                            <col style="width: 11%;">
+                                            <col style="width: 6%;">
+                                            <col style="width: 7%;">
                                         </colgroup>
                                         <thead>
                                             <tr style="border-bottom: 1px solid rgba(255,255,255,0.1); color: #9ca3af; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">
-                                                <th style="padding: 10px 8px; width: 12%; min-width: 110px; white-space: nowrap;">Rez / Voucher</th>
-                                                <th style="padding: 10px 8px; width: 16%; min-width: 140px; white-space: nowrap;">Misafir Adı</th>
-                                                <th style="padding: 10px 8px; width: 18%; min-width: 150px; white-space: nowrap;">Acente / Kanal</th>
-                                                <th style="padding: 10px 8px; width: 22%; min-width: 195px; white-space: nowrap;">Giriş - Çıkış</th>
-                                                <th style="padding: 10px 8px; width: 8%; min-width: 75px; text-align: center; white-space: nowrap;">Gece</th>
-                                                <th style="padding: 10px 8px; width: 12%; min-width: 115px; text-align: center; white-space: nowrap;">Oda & Tipi</th>
-                                                <th style="padding: 10px 8px; width: 6%; min-width: 65px; text-align: center; white-space: nowrap;">Pax</th>
-                                                <th style="padding: 10px 8px; width: 6%; min-width: 80px; text-align: right; white-space: nowrap;">Kayıt Saati</th>
+                                                <th style="padding: 10px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Rez / Voucher</th>
+                                                <th style="padding: 10px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Misafir Adı</th>
+                                                <th style="padding: 10px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Acente / Kanal</th>
+                                                <th style="padding: 10px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Giriş - Çıkış</th>
+                                                <th style="padding: 10px 8px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Gece</th>
+                                                <th style="padding: 10px 8px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Oda & Tipi</th>
+                                                <th style="padding: 10px 8px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Pax</th>
+                                                <th style="padding: 10px 8px; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Kayıt Saati</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -1005,18 +1007,18 @@
                                     <td style="padding: 10px 8px; font-weight: 700; color: #60a5fa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${item.VoucherNo || ''}">${item.VoucherNo || ''}</td>
                                     <td class="guest-name-cell" style="padding: 10px 8px; font-weight: 700; color: #f9fafb; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${item.GuestName || ''}">${item.GuestName || ''}</td>
                                     <td style="padding: 10px 8px; color: #fbbf24; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${item.AgencyName || ''}">${item.AgencyName || ''}</td>
-                                    <td style="padding: 10px 8px; white-space: nowrap;">
+                                    <td style="padding: 10px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                                         <span style="color: #34d399; font-weight: 700;">${item.CheckinDate || ''}</span> 
                                         <span style="color: #6b7280; margin: 0 2px;">➔</span> 
                                         <span style="color: #f87171; font-weight: 600;">${item.CheckoutDate || ''}</span>
                                     </td>
-                                    <td style="padding: 10px 8px; text-align: center; font-weight: 700; color: #e2e8f0; white-space: nowrap;">${item.Nights || 1} Gece</td>
-                                    <td style="padding: 10px 8px; text-align: center; font-weight: 700; color: #10b981; white-space: nowrap;">
+                                    <td style="padding: 10px 8px; text-align: center; font-weight: 700; color: #e2e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.Nights || 1} Gece</td>
+                                    <td style="padding: 10px 8px; text-align: center; font-weight: 700; color: #10b981; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                                         ${item.RoomCount || 1} Oda
-                                        ${item.RoomType ? `<span style="font-size: 11px; background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); padding: 2px 7px; border-radius: 6px; margin-left: 6px; font-weight: 800;">${item.RoomType}</span>` : ''}
+                                        ${item.RoomType ? `<span style="font-size: 11px; background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); padding: 2px 7px; border-radius: 6px; margin-left: 4px; font-weight: 800;">${item.RoomType}</span>` : ''}
                                     </td>
-                                    <td style="padding: 10px 8px; text-align: center; font-weight: 700; color: #f59e0b; white-space: nowrap;">${item.Pax || 0} Pax</td>
-                                    <td style="padding: 10px 8px; text-align: right; color: #9ca3af; font-size: 12px; white-space: nowrap;">${item.RecordDate || ''}</td>
+                                    <td style="padding: 10px 8px; text-align: center; font-weight: 700; color: #f59e0b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.Pax || 0} Pax</td>
+                                    <td style="padding: 10px 8px; text-align: right; color: #9ca3af; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.RecordDate || ''}</td>
                                 </tr>
                             `;
                         });
