@@ -68,11 +68,9 @@ def fetch_data():
     try:
         conn = get_conn()
         data = Q.get_all_stats(conn, YEARS, as_of_date)
-        pace_data = Q.get_pace_analysis(conn, as_of_date)
         conn.close()
         res = {
             "all_stats": data,
-            "pace_stats": pace_data,
             "today_str": today_str,
             "range_text": range_text,
             "as_of_date": as_of_date,
