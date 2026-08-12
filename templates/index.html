@@ -975,8 +975,9 @@
                 });
                 const availableDates = Array.from(availableDatesSet).sort().reverse();
 
-                // Default to today or latest available date
-                const todayStr = new Date().toISOString().split('T')[0];
+                // Default to today or latest available date (using local date string)
+                const now = new Date();
+                const todayStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
                 if (!selectedRecordDate) {
                     if (availableDates.includes(todayStr)) {
                         selectedRecordDate = todayStr;

@@ -358,6 +358,7 @@ def get_year_stats(conn, year, as_of_month_day):
         FROM Reservation r
         LEFT JOIN Agency a ON a.RecId = r.AgencyId
         WHERE CAST(r.RecordDate AS DATE) = CAST(GETDATE() AS DATE)
+          AND YEAR(r.CheckinDate) = {year}
           {COMMON_FILTER}
         """
 
