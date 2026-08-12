@@ -623,4 +623,3 @@ def get_pace_analysis(conn, as_of_month_day):
             })
             
     return pace_list
-
