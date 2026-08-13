@@ -47,7 +47,6 @@ def get_year_stats(conn, year, as_of_month_day):
     mtd_days = day  # number of days from 1st to today
 
     # 1. GENERAL FORECAST MTD: DailyDetail dd.Status=1 — May 1 to today (Season-to-Date for AYLIK DURUM card)
-    # Returns rooms, pax, and bed nights for the period (cumulative)
     nights_query = f"""
     SELECT 
         r.AgencyId,
@@ -346,25 +345,74 @@ def get_year_stats(conn, year, as_of_month_day):
         log.error(f"Error fetching LY daily rooms for {year}: {e}")
         ly_daily_rooms, ly_daily_pax = 0, 0
 
-    # 2d. RESERVATIONS ENTERED TODAY (count of rooms entered today)
-    today_date_str = f"{year}{as_of_month_day.replace('-', '')}"
-    today_entered_query = f"""
-    SELECT 
-        COUNT(DISTINCT r.RecId) as EnteredRooms,
-        ISNULL(SUM(r.Pax + r.Childs), 0) as EnteredPax
-    FROM Reservation r
-    LEFT JOIN Agency a ON a.RecId = r.AgencyId
-    WHERE CAST(r.RecordDate AS DATE) = '{today_date_str}'
-      {COMMON_FILTER}
-    """
+    # 2d. RESERVATIONS ENTERED TODAY (only for current active year 2026)
+    today_entered_rooms = 0
+    today_entered_pax = 0
+    today_entered_details = []
 
-    try:
-        df_entpax = pd.read_sql(today_entered_query, conn)
-        today_entered_rooms = int(df_entpax.iloc[0]['EnteredRooms'])
-        today_entered_pax = int(df_entpax.iloc[0]['EnteredPax'])
-    except Exception as e:
-        log.error(f"Error fetching today entered for {year}: {e}")
-        today_entered_rooms, today_entered_pax = 0, 0
+    if year == 2026:
+        today_entered_query = f"""
+        SELECT 
+            COUNT(DISTINCT r.RecId) as EnteredRooms,
+            ISNULL(SUM(r.Pax + r.Childs), 0) as EnteredPax
+        FROM Reservation r
+        LEFT JOIN Agency a ON a.RecId = r.AgencyId
+        WHERE CAST(r.RecordDate AS DATE) = CAST(GETDATE() AS DATE)
+          AND YEAR(r.CheckinDate) = {year}
+          {COMMON_FILTER}
+        """
+
+        try:
+            df_entpax = pd.read_sql(today_entered_query, conn)
+            today_entered_rooms = int(df_entpax.iloc[0]['EnteredRooms'])
+            today_entered_pax = int(df_entpax.iloc[0]['EnteredPax'])
+        except Exception as e:
+            log.error(f"Error fetching today entered for {year}: {e}")
+            today_entered_rooms, today_entered_pax = 0, 0
+
+        # Detailed list of reservations entered in the last 14 days with creation date and arrival dates breakdown
+        today_entered_detail_query = f"""
+        SELECT 
+            r.RecId,
+            ISNULL(r.Voucher, CAST(r.RecId AS VARCHAR)) as VoucherNo,
+            ISNULL(r.FirstName1, '') + ' ' + ISNULL(r.LastName1, '') as GuestName,
+            CONVERT(VARCHAR(10), r.CheckinDate, 120) as CheckinDate,
+            CONVERT(VARCHAR(10), r.CheckOutDate, 120) as CheckoutDate,
+            DATEDIFF(day, r.CheckinDate, r.CheckOutDate) as Nights,
+            ISNULL(a.Name, ISNULL(a.AgencyCode, 'MÜNFERİT')) as AgencyName,
+            r.Pax,
+            r.Childs,
+            1 as RoomCount,
+            ISNULL(r.RoomType, '') as RoomType,
+            CONVERT(VARCHAR(10), r.RecordDate, 120) as RecordDateOnly,
+            CONVERT(VARCHAR(16), r.RecordDate, 120) as RecordDate
+        FROM Reservation r
+        LEFT JOIN Agency a ON a.RecId = r.AgencyId
+        WHERE CAST(r.RecordDate AS DATE) >= DATEADD(day, -14, CAST(GETDATE() AS DATE))
+          AND YEAR(r.CheckinDate) = {year}
+          {COMMON_FILTER}
+        ORDER BY r.RecordDate DESC, r.CheckinDate ASC
+        """
+        try:
+            df_entdetails = pd.read_sql(today_entered_detail_query, conn)
+            for _, row in df_entdetails.iterrows():
+                today_entered_details.append({
+                    'RecId': int(row['RecId']),
+                    'VoucherNo': str(row['VoucherNo']),
+                    'GuestName': str(row['GuestName']),
+                    'CheckinDate': str(row['CheckinDate']),
+                    'CheckoutDate': str(row['CheckoutDate']),
+                    'Nights': int(row['Nights']),
+                    'AgencyName': str(row['AgencyName']),
+                    'Pax': int(row['Pax']),
+                    'Childs': int(row['Childs']),
+                    'RoomCount': int(row['RoomCount']),
+                    'RoomType': str(row['RoomType']),
+                    'RecordDateOnly': str(row['RecordDateOnly']),
+                    'RecordDate': str(row['RecordDate'])
+                })
+        except Exception as e:
+            log.error(f"Error fetching today entered details for {year}: {e}")
 
     # 3. OCCUPANCY (Season Pace - Forecasted rooms vs Capacity)
     try:
@@ -385,7 +433,7 @@ def get_year_stats(conn, year, as_of_month_day):
         WHERE dd.StayDate BETWEEN '{season_start}' AND '{season_end}'
           AND dd.Status != -1
           {COMMON_FILTER}
-          AND CAST(ISNULL(r.RecordDate, r.CheckinDate) AS DATE) <= '{year}-{as_of_month_day}'
+          AND ISNULL(r.RecordDate, r.CheckinDate) <= '{year}{as_of_month_day.replace("-", "")} 23:59:59'
         """
         df_pace = pd.read_sql(pace_query, conn)
         season_rooms = int(df_pace.iloc[0]['SeasonNightRoom'] or 0)
@@ -428,6 +476,7 @@ def get_year_stats(conn, year, as_of_month_day):
         'LYTodayRevenueEUR': ly_today_rev_eur,
         'TodayEnteredRooms': today_entered_rooms,
         'TodayEnteredPax': today_entered_pax,
+        'TodayEnteredDetails': today_entered_details,
         # Accommodation Analysis (sevki) metrics - MTD
         'PctRoom': pct_room,
         'PctBed': pct_bed,
@@ -470,7 +519,7 @@ def get_all_stats(conn, years, as_of_month_day):
                 'TodayRevenueEUR': 0.0, 'TodayRevenueTRY': 0.0,
                 'DailyRooms': 0, 'DailyPax': 0, 'LYDailyRooms': 0, 'LYDailyPax': 0,
                 'LYTodayRevenueEUR': 0.0,
-                'TodayEnteredRooms': 0, 'TodayEnteredPax': 0,
+                'TodayEnteredRooms': 0, 'TodayEnteredPax': 0, 'TodayEnteredDetails': [],
                 'PctRoom': 0, 'PctBed': 0, 'BedNight': 0, 'AvpPax': 0,
                 'LYPctRoom': 0, 'LYPctBed': 0, 'LYBedNight': 0, 'LYAvpPax': 0,
                 'AccMtdRevenueEUR': 0.0, 'LYAccMtdRevenueEUR': 0.0,
@@ -479,3 +528,99 @@ def get_all_stats(conn, years, as_of_month_day):
                 'LYFMRevenueEUR': 0, 'LYFMAvpPax': 0, 'Month': 5, 'Day': 1, 'DaysInMonth': 31,
             }
     return results
+
+
+def get_pace_analysis(conn, as_of_month_day):
+    years = [2023, 2024, 2025, 2026]
+    COMMON_FILTER = """
+      AND r.Status != -1
+      AND ISNULL(a.AgencyCode, '') NOT LIKE '%COMP%'
+      AND ISNULL(r.LastName1, '') NOT IN ('aaa', 'TOLA', 'test', 'TEST', 'DUMMY')
+      AND ISNULL(r.FirstName1, '') NOT IN ('aaa', 'TOLA', 'test', 'TEST', 'DUMMY')
+    """
+    
+    TOTAL_ROOM_CAPACITY = 111 * 184  # 20424
+    TOTAL_BED_CAPACITY = 222 * 184   # 40848
+    
+    parts = as_of_month_day.split('-')
+    month = int(parts[0])
+    day = int(parts[1])
+    
+    pace_list = []
+    for Y in years:
+        cutoff = f"{Y}{month:02d}{day:02d} 23:59:59"
+        cutoff_date_str = f"{Y}{month:02d}{day:02d}"
+        record_date_str = f"{day:02d}.{month:02d}.{Y}"
+        
+        # 1. Room count & Pax count from DailyDetail
+        dd_query = f"""
+        SELECT 
+            COUNT(dd.ReservationId) as RoomCount,
+            ISNULL(SUM(dd.Pax + dd.Childs), 0) as BedNightCount
+        FROM DailyDetail dd WITH (NOLOCK)
+        JOIN Reservation r WITH (NOLOCK) ON r.RecId = dd.ReservationId
+        LEFT JOIN Agency a WITH (NOLOCK) ON a.RecId = r.AgencyId
+        WHERE dd.StayDate BETWEEN '{Y}0501' AND '{Y}1031'
+          AND dd.Status != -1
+          {COMMON_FILTER}
+          AND ISNULL(r.RecordDate, r.CheckinDate) <= '{cutoff}'
+        """
+
+        # 2. Revenue from Folio or ManagerReport
+        fol_query = f"""
+        SELECT IsNull(Sum(Case When F.CurrencyCode = 'EUR' Then F.NetAmount Else F.NetAmount*(Dbo.FnFoundCurr(IsNull(F.CurrDate,F.Postdate),F.CurrencyCode,1,1)/Dbo.FnFoundCurr(IsNull(F.CurrDate,F.PostDate),'EUR',1,1)) End),0) As TotalEUR
+        FROM Department D With (NoLock)
+        JOIN Folio F With (NoLock) ON D.DepartCode = F.DepartCode AND D.DepartType = 1
+        WHERE F.CompanyRecId=1 and D.CompanyRecId=1 And F.Deleted = 0 
+          AND F.PostDate BETWEEN '{Y}0501' AND '{cutoff_date_str}'
+        """
+
+        try:
+            df_dd = pd.read_sql(dd_query, conn)
+            row_dd = df_dd.iloc[0]
+            room_cnt = int(row_dd['RoomCount'] or 0)
+            pax_cnt = int(row_dd['BedNightCount'] or 0)
+
+            total_eur = 0.0
+            try:
+                df_fol = pd.read_sql(fol_query, conn)
+                total_eur = float(df_fol.iloc[0]['TotalEUR'] or 0.0)
+            except Exception as e_fol:
+                log.error(f"Error fetching folio EUR for pace {Y}: {e_fol}")
+            
+            # Fallback if folio returns 0 (e.g. for future season 2026 where folio entries are created on stay/checkout)
+            if total_eur == 0.0 and room_cnt > 0:
+                try:
+                    # Estimate based on ManagerReport or historical ADR
+                    sp_date = f"{Y}{month:02d}{day:02d}"
+                    sql_sp = f"SET NOCOUNT ON; EXEC ManagerReport @CompanyRecID=1, @ManagerDate='{sp_date}', @AvailableRoom=0"
+                    df_sp = pd.read_sql(sql_sp, conn)
+                    total_eur = float(df_sp.iloc[0].get('YearlyNetRoomRevenueEUR', df_sp.iloc[0].get('YearlyRoomRevenueForeign', 0.0)))
+                except Exception:
+                    pass
+
+            occ_room = (room_cnt / TOTAL_ROOM_CAPACITY * 100) if TOTAL_ROOM_CAPACITY > 0 else 0.0
+            occ_pax = (pax_cnt / TOTAL_BED_CAPACITY * 100) if TOTAL_BED_CAPACITY > 0 else 0.0
+            
+            pace_list.append({
+                'RecordDate': record_date_str,
+                'Year': Y,
+                'Pax': pax_cnt,
+                'Room': room_cnt,
+                'TotalEUR': total_eur,
+                'OccPax': occ_pax,
+                'OccRoom': occ_room
+            })
+        except Exception as e:
+            log.error(f"Error fetching pace analysis for {Y}: {e}")
+            pace_list.append({
+                'RecordDate': record_date_str,
+                'Year': Y,
+                'Pax': 0,
+                'Room': 0,
+                'TotalEUR': 0.0,
+                'OccPax': 0.0,
+                'OccRoom': 0.0
+            })
+            
+    return pace_list
