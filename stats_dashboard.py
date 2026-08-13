@@ -86,10 +86,11 @@ def fetch_data():
         save_disk_cache(res)
         
         # Detailed query: get_pace_analysis
-        pace_data = Q.get_pace_analysis(conn, as_of_date)
+        if hasattr(Q, "get_pace_analysis"):
+            pace_data = Q.get_pace_analysis(conn, as_of_date)
+            res["pace_stats"] = pace_data
         conn.close()
         
-        res["pace_stats"] = pace_data
         cached_data = res
         save_disk_cache(res)
         log.info("Complete refresh finished successfully!")
