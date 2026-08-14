@@ -647,11 +647,9 @@
                                     <span style="font-size: 40px; color: #f9fafb; display: flex; align-items: baseline;">
                                         <span>{{ "{:,.0f}".format(stats.DailyRooms).replace(',', '.') }}<span class="metric-unit" style="font-size: 16px; margin-left: 4px;">ODA</span></span>
                                     </span>
-                                    {% if stats.TodayEnteredRooms and stats.TodayEnteredRooms > 0 %}
-                                        <span onclick="openTodayEnteredModal('2026')" style="cursor: pointer; font-size: 13px; font-weight: 800; color: #60a5fa; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); padding: 2px 7px; border-radius: 8px; letter-spacing: 0.5px; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 4px;" title="Girilen rezervasyon detaylarını görmek için tıklayın">
-                                            +{{ stats.TodayEnteredRooms }} REZ
-                                        </span>
-                                    {% endif %}
+                                    <span onclick="openTodayEnteredModal('2026')" style="cursor: pointer; font-size: 13px; font-weight: 800; color: #60a5fa; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); padding: 2px 7px; border-radius: 8px; letter-spacing: 0.5px; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 4px;" title="Girilen rezervasyon detaylarını görmek için tıklayın">
+                                        +{{ stats.TodayEnteredRooms if stats.TodayEnteredRooms else 0 }} REZ
+                                    </span>
                                 </div>
                                 <span style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 4px;">
                                     <svg width="110" height="12" viewBox="0 0 140 24" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.6;">
