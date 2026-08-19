@@ -16,11 +16,16 @@ logging.basicConfig(level=logging.INFO, format="[%(asctime)s] %(message)s", date
 log = logging.getLogger(__name__)
 
 # Load Environment
-load_dotenv()
+env_path = os.path.join(os.path.dirname(__file__), '.env')
+if os.path.exists(env_path):
+    load_dotenv(env_path)
+else:
+    load_dotenv()
+
 DB_SERVER = os.getenv("DB_SERVER", "192.168.0.41,1433")
 DB_NAME = os.getenv("DB_NAME", "SednaAdakoy")
 DB_USER = os.getenv("DB_USER", "gokhan")
-DB_PASS = os.getenv("DB_PASS", "")
+DB_PASS = os.getenv("DB_PASS", "Ad!!2025!!")
 
 CONN_STR = os.getenv(
     "DB_CONNECTION_STRING",
