@@ -17,7 +17,15 @@ log = logging.getLogger(__name__)
 
 # Load Environment
 load_dotenv()
-CONN_STR = os.getenv("DB_CONNECTION_STRING") or "DRIVER={ODBC Driver 18 for SQL Server};SERVER=192.168.0.41,1433;DATABASE=SednaAdakoy;UID=gokhan;PWD=Ad!!2025!!;TrustServerCertificate=yes;"
+DB_SERVER = os.getenv("DB_SERVER", "192.168.0.41,1433")
+DB_NAME = os.getenv("DB_NAME", "SednaAdakoy")
+DB_USER = os.getenv("DB_USER", "gokhan")
+DB_PASS = os.getenv("DB_PASS", "")
+
+CONN_STR = os.getenv(
+    "DB_CONNECTION_STRING",
+    f"DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={DB_SERVER};DATABASE={DB_NAME};UID={DB_USER};PWD={DB_PASS};TrustServerCertificate=yes;"
+)
 PORT = int(os.getenv("PORT", 8085))
 REFRESH_INTERVAL = int(os.getenv("REFRESH_INTERVAL", 1800))
 YEARS = [2025, 2026]
