@@ -376,8 +376,8 @@ def get_year_stats(conn, year, as_of_month_day):
             r.RecId,
             ISNULL(r.Voucher, CAST(r.RecId AS VARCHAR)) as VoucherNo,
             ISNULL(r.FirstName1, '') + ' ' + ISNULL(r.LastName1, '') as GuestName,
-            CONVERT(VARCHAR(10), r.CheckinDate, 120) as CheckinDate,
-            CONVERT(VARCHAR(10), r.CheckOutDate, 120) as CheckoutDate,
+            CONVERT(VARCHAR(10), r.CheckinDate, 104) as CheckinDate,
+            CONVERT(VARCHAR(10), r.CheckOutDate, 104) as CheckoutDate,
             DATEDIFF(day, r.CheckinDate, r.CheckOutDate) as Nights,
             ISNULL(a.Name, ISNULL(a.AgencyCode, 'MÜNFERİT')) as AgencyName,
             r.Pax,
@@ -385,7 +385,7 @@ def get_year_stats(conn, year, as_of_month_day):
             1 as RoomCount,
             ISNULL(r.RoomType, '') as RoomType,
             CONVERT(VARCHAR(10), r.RecordDate, 120) as RecordDateOnly,
-            CONVERT(VARCHAR(16), r.RecordDate, 120) as RecordDate
+            CONVERT(VARCHAR(10), r.RecordDate, 104) + ' ' + CONVERT(VARCHAR(5), r.RecordDate, 108) as RecordDate
         FROM Reservation r
         LEFT JOIN Agency a ON a.RecId = r.AgencyId
         WHERE CAST(r.RecordDate AS DATE) >= DATEADD(day, -14, CAST(GETDATE() AS DATE))
