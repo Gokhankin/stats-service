@@ -390,7 +390,7 @@
             }
             .table-responsive table {
                 font-size: 12px !important;
-                min-width: 720px !important;
+                min-width: 1080px !important;
             }
             .table-responsive th, .table-responsive td {
                 padding: 8px 6px !important;
@@ -408,7 +408,81 @@
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
         }
-    </style>
+    
+        /* PACE ANALYSIS CARD STYLING */
+        .pace-card {
+            flex: 1.2;
+            min-width: 320px;
+            padding: 24px 28px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .pace-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .pace-title {
+            font-size: 16px;
+            letter-spacing: 2px;
+            color: #f9fafb;
+            font-weight: 800;
+        }
+
+        .pace-table-wrapper {
+            margin-bottom: 20px;
+            overflow-x: auto;
+        }
+
+        .pace-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        .pace-table th {
+            text-align: left;
+            padding: 8px 6px;
+            color: #9ca3af;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .pace-table td {
+            padding: 8px 6px;
+            color: #f3f4f6;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            font-weight: 600;
+        }
+
+        .pace-table td.date-cell {
+            color: #60a5fa;
+            font-weight: 700;
+        }
+
+        .pace-table td.year-cell {
+            color: #fbbf24;
+            font-weight: 700;
+        }
+
+        .pace-table .eur-badge {
+            color: #34d399;
+            font-weight: 700;
+        }
+
+        .pace-chart-section {
+            height: 180px;
+            position: relative;
+            margin-top: 10px;
+        }
+
+</style>
 </head>
 <body>
     <header>
@@ -442,7 +516,7 @@
                                 <span style="font-size: 48px; color: #f9fafb; display: flex; align-items: baseline;">
                                     <span>{{ "{:,.0f}".format(stats.DailyRooms).replace(',', '.') }}<span class="metric-unit" style="font-size: 20px; margin-left: 4px;">ODA</span></span>
                                 </span>
-                                {% if year == 2026 %}
+                                {% if year == 2026 or year == '2026' or (stats.TodayEnteredRooms is defined and stats.TodayEnteredRooms > 0) %}
                                     <span onclick="openTodayEnteredModal({{ year }})" style="cursor: pointer; font-size: 18px; font-weight: 800; color: #60a5fa; letter-spacing: 0.5px; transition: opacity 0.2s; display: inline-flex; align-items: center;" title="Girilen rezervasyon detaylarını görmek için tıklayın" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
                                         +{{ stats.TodayEnteredRooms }} ODA
                                     </span>
@@ -572,7 +646,7 @@
 
         <!-- 3. KART: ACCOMMODATION ANALYSIS REPORT (FULL WIDTH) -->
         {% set year = 2026 %}
-        {% set stats = all_stats[year] %}
+        {% set stats = all_stats.get(year) or all_stats.get(year|string) %}
         <div class="card" style="flex: 0 0 auto; padding: 15px 25px; display: flex; flex-direction: column;">
             <div class="metric-label" style="font-size: 16px; letter-spacing: 3px; color: #f9fafb; font-weight: 800; margin-bottom: 8px; text-align: center;">ACCOMMODATION ANALYSIS</div>
             
@@ -988,16 +1062,16 @@ function openTodayEnteredModal(year, filterRecordDate = null) {
                                 </div>
 
                                 <div class="table-responsive">
-                                    <table style="width: 100%; border-collapse: collapse; font-size: 13px; min-width: 960px; table-layout: fixed;">
+                                    <table style="width: 100%; border-collapse: collapse; font-size: 13px; min-width: 1080px; table-layout: fixed;">
                                         <colgroup>
-                                            <col style="width: 10%;">
+                                            <col style="width: 11%;">
+                                            <col style="width: 16%;">
                                             <col style="width: 16%;">
                                             <col style="width: 18%;">
-                                            <col style="width: 18%;">
+                                            <col style="width: 7%;">
+                                            <col style="width: 12%;">
                                             <col style="width: 6%;">
-                                            <col style="width: 10%;">
-                                            <col style="width: 5%;">
-                                            <col style="width: 17%;">
+                                            <col style="width: 14%;">
                                         </colgroup>
                                         <thead>
                                             <tr style="border-bottom: 1px solid rgba(255,255,255,0.1); color: #9ca3af; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">
@@ -1069,6 +1143,122 @@ function openTodayEnteredModal(year, filterRecordDate = null) {
                 closeTodayEnteredModal();
             }
         });
-    </script>
+    
+
+    // PACE BAR CHART INITIALIZATION
+    document.addEventListener("DOMContentLoaded", function() {
+        try {
+            const paceData = [
+                {% if pace_stats %}
+                    {% for item in pace_stats %}
+                        { year: '{{ item.Year }}', total: {{ item.TotalEUR if item.TotalEUR is defined else 0 }} },
+                    {% endfor %}
+                {% else %}
+                    { year: '2023', total: 0 },
+                    { year: '2024', total: 0 },
+                    { year: '2025', total: 0 },
+                    { year: '2026', total: 0 }
+                {% endif %}
+            ];
+
+            const ctx = document.getElementById('paceChart');
+            if (ctx && typeof Chart !== 'undefined') {
+                const chartCtx = ctx.getContext('2d');
+                
+                const gradient = chartCtx.createLinearGradient(0, 0, 0, 160);
+                gradient.addColorStop(0, '#3b82f6');
+                gradient.addColorStop(1, '#1d4ed8');
+
+                new Chart(chartCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: paceData.map(d => d.year),
+                        datasets: [{
+                            data: paceData.map(d => d.total),
+                            backgroundColor: gradient,
+                            borderColor: '#60a5fa',
+                            borderWidth: 1,
+                            borderRadius: 4,
+                            barThickness: window.innerWidth <= 768 ? 38 : 32
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        layout: {
+                            padding: {
+                                top: 35,
+                                bottom: 5,
+                                left: 10,
+                                right: 10
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.raw.toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' €';
+                                    }
+                                }
+                            },
+                            datalabels: {
+                                anchor: function() {
+                                    return window.innerWidth <= 768 ? 'center' : 'end';
+                                },
+                                align: function() {
+                                    return window.innerWidth <= 768 ? 'center' : 'end';
+                                },
+                                rotation: function() {
+                                    return window.innerWidth <= 768 ? -90 : 0;
+                                },
+                                offset: function() {
+                                    return window.innerWidth <= 768 ? 0 : 4;
+                                },
+                                color: '#ffffff',
+                                font: function() {
+                                    const mobile = window.innerWidth <= 768;
+                                    return {
+                                        family: 'Barlow',
+                                        weight: 'bold',
+                                        size: mobile ? 11 : 12
+                                    };
+                                },
+                                formatter: function(value) {
+                                    const mobile = window.innerWidth <= 768;
+                                    if (mobile) {
+                                        return value.toLocaleString('de-DE', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + ' €';
+                                    }
+                                    return value.toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' €';
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: { display: false },
+                                ticks: { color: '#ffffff', font: { family: 'Barlow', weight: 'bold', size: 14 } }
+                            },
+                            y: {
+                                grid: { color: 'rgba(255, 255, 255, 0.08)' },
+                                ticks: {
+                                    color: 'rgba(255, 255, 255, 0.6)',
+                                    font: { size: 11, weight: 'bold' },
+                                    callback: function(value) {
+                                        return (value / 1000000).toFixed(1) + 'M €';
+                                    }
+                                },
+                                suggestedMax: Math.max(...paceData.map(d => d.total)) * 1.25
+                            }
+                        }
+                    },
+                    plugins: [typeof ChartDataLabels !== 'undefined' ? ChartDataLabels : {}]
+                });
+            }
+        } catch(e) {
+            console.error("Pace chart init error:", e);
+        }
+    });
+
+</script>
 </body>
 </html>

@@ -144,7 +144,8 @@ def build_html(data):
         return "<h1>Veri yükleniyor, lütfen sayfayı 5 saniye sonra yenileyin...</h1>"
     env = Environment(loader=FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates')))
     template = env.get_template('index.html')
-    all_stats = data.get("all_stats", {})
+    raw_all_stats = data.get("all_stats", {})
+    all_stats = {str(k): v for k, v in raw_all_stats.items()} if raw_all_stats else {}
     pace_stats = data.get("pace_stats", {})
     return template.render(
         all_stats=all_stats,
